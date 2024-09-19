@@ -1,0 +1,180 @@
+---
+title: "hw4"
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+
+# Q1 If your working directory is myfolder/homework/, what relative path would you specify to get the file located at myfolder/MyData.csv?
+
+> The relative path to access the file located at myfolder/MyData.csv would be: ../MyData.csv
+
+# Q2 What are the major benefits of using R projects?
+
+> The major benefits include: - make it easier to manage files since all project-related files are in one directory - With git, it is easier to collaborate with other people and perform version control - The R project environment makes it easier to switch between different projects - R can organize different projects clearly, avoiding conflicts between packages or data
+
+# Q3 What is git and what is github?
+
+> **git** is a version control system used to track changes in the source code while software is developed. It allows several developers to collaborate on a project and keep change history, and save different versions of the code.
+
+> **GitHub** is a web-based platform that uses Git for version control. In Github environment, developers can collaborate and share their repositories, manage projects, pull requests, etc.
+
+# Q4 What are the two main differences between a tibble and a data.frame?
+
+> 1.  A tibble displays only the first 10 rows and the columns that fit on the screen. A data.frame prints all the rows and columns by default.
+
+> 2.  In a tibble, columns are not automatically converted to character type if they contain non-numeric values. In a data.frame, strings are often automatically converted to factors.
+
+# Q5 Rewrite the following nested function call using BaseR's chaining operator
+
+as_tibble(iris) \|\> select(starts_with("Petal"), Species) \|\> filter(Petal.Length \< 1.55) \|\> arrange(Species)
+
+## Glass data
+
+```{r}
+# glass data
+
+library(tidyverse)
+# define column names
+column_names <- c("ID", "RI", "Na", "Mg", "Al", "Si", "K", "Ca", "Ba", "Fe", "Type")
+
+# Read the data from the website
+glass_data <- read_csv("https://www4.stat.ncsu.edu/~online/datasets/glass.data", col_names = column_names)
+
+# print out the tibble
+glass_data
+
+
+# start a chain that overwrites the Type variable, using mutate()
+glass_data <- glass_data %>%
+  mutate(Type_of_glass = ifelse(Type == 1, "building_windows_float_processed",
+                         ifelse(Type == 2, "building_windows_non_float_processed",
+                         ifelse(Type == 3, "vehicle_windows_float_processed",
+                         ifelse(Type == 4, "vehicle_windows_non_float_processed",
+                         ifelse(Type == 5, "containers",
+                         ifelse(Type == 6, "tableware",
+                         ifelse(Type == 7, "headlamps", NA)))))))) %>%
+  select(-Type)
+
+# continue the chain and keep only obs with certain conditions
+glass_data_filtered <- glass_data %>%
+  filter(Fe < 0.2 & (Type_of_glass == "tableware" | Type_of_glass == "headlamps"))
+
+glass_data_filtered
+
+```
+
+## Yeast data
+
+```{r}
+# Yeast data
+
+yeast_data <- read_delim("https://www4.stat.ncsu.edu/~online/datasets/yeast.data", delim = " ")
+
+
+
+column_names <- c("Seq_Name", "mcg", "gvh", "alm", "mit", "erl", "pox", "vac", "nuc", "class")
+
+yeast_data2 <- read_delim("https://www4.stat.ncsu.edu/~online/datasets/yeast.data", 
+                         delim = " ", col_names = column_names, 
+                         trim_ws = TRUE)
+
+# start a chain , remove the 'seq_name', ..
+yeast_data_clean <- yeast_data2 %>%
+  select(-Seq_Name, -nuc)
+
+# continue chain to add columns corresponding to the mean and median
+yeast_data_clean2 <- yeast_data2 %>%
+  select(-Seq_Name, -nuc) %>%
+  group_by(class) %>%
+  mutate(across(c(mcg, gvh, alm, mit, erl, pox, vac), 
+                list(mean = ~ mean(.), median = ~ median(.)), 
+                .names = "{col}_{fn}"))
+
+yeast_data_clean2
+
+```
+
+## white wine data set
+
+```{r}
+
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+install.packages("readxl")
+library(readxl)
+
+# specify path to the saved excel
+file_path <- "C:/Users/tangw1/Desktop/ST558_repo/hw4/white-wine.xlsx"
+
+# read
+white_wine_data <- read_excel(file_path, sheet = 1)
+
+# print out tibble
+print(white_wine_data)
+
+# read 2nd sheet
+alt_variable_names <- read_excel(file_path, sheet = 2)
+
+# grab col
+new_column_names <- alt_variable_names[[1]]
+
+# overwrite
+colnames(white_wine_data) <- new_column_names
+
+# add a column
+white_wine_data <- white_wine_data %>%
+  mutate(wine_type = "white")
+
+# read red wine data set
+
+url <- "https://www4.stat.ncsu.edu/~online/datasets/red-wine.csv"
+
+#read data set from URL
+red_wine_data <- read_delim(url, delim = ";", col_types = cols())
+
+# replace var names
+colnames(red_wine_data) <- new_column_names
+
+# append a col
+red_wine_data <- red_wine_data %>%
+  mutate(wine_type = "red")
+
+# combine
+combined_wine_data <- bind_rows(white_wine_data, red_wine_data)
+
+```
+
+## steps on combined wine data
+
+```{r}
+# filter data to only look at high quality 
+filtered_wine_data <- combined_wine_data %>%
+  filter(quality > 6.5, alcohol < 132)
+
+# highest to lowest
+filtered_wine_data <- combined_wine_data %>%
+  filter(quality > 6.5, alcohol < 132) %>%
+  arrange(desc(quality))
+
+# certain variables
+final_wine_data <- combined_wine_data %>%
+  filter(quality > 6.5, alcohol < 132) %>%
+  arrange(desc(quality)) %>%
+  select(contains("acid"), alcohol, wine_type, quality)
+
+# add mean etc
+final_wine_data <- combined_wine_data %>%
+  filter(quality > 6.5, alcohol < 132) %>%
+  arrange(desc(quality)) %>%
+  select(contains("acid"), alcohol, wine_type, quality) %>%
+  group_by(quality) %>%
+  mutate(
+    alcohol_mean = mean(alcohol),
+    alcohol_sd = sd(alcohol)
+  ) %>%
+  ungroup()
+
+print(final_wine_data)
+
+```
